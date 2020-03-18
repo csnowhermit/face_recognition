@@ -32,6 +32,10 @@
 
 ​	evaluation_test.py：模型评价脚本，并绘制模型ROC曲线，测试文件使用agedb_30.bin人脸数据库。
 
+​	dataset/images/：放待检人图片。
+
+​		命名要求：dataset/images/人名标签/图片1.jpg
+
 ## 5、科普
 
 ### 5.1、ROC

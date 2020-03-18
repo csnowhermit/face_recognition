@@ -107,6 +107,5 @@ ENV/
 
 .idea/
 
-dataset/images/renxiaotian/
-dataset/images/tiancheng/
+dataset/images/
 models/
