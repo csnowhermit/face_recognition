@@ -42,9 +42,7 @@
 
 纵坐标：Y轴，敏感性，也叫真阳性率（敏感度）；Y轴越大准确率越高。
 
-
-
-![image]()https://github.com/xbder/FaceReco4Monitor/ROC.jpg
+![data](https://github.com/xbder/FaceReco4Monitor/blob/master/ROC.jpg)
 
 ​	如上图所示，根据曲线位置，将整个图划分为两部分，曲线下方部分面积为AUC（Area Under Curve），用来表示预测准确性，AUC值越高，也就是曲线下方面积越大，说明预测准确率越高。
 
