@@ -54,7 +54,7 @@ def load_dataset(dataset_path, filename):
     names_list=file_processing.read_data(filename,split=None,convertNum=False)
     return embeddings,names_list
 
-def compare_embadding(pred_emb, dataset_emb, names_list, threshold=1.0):    # 原：threshold=0.65
+def compare_embadding(pred_emb, dataset_emb, names_list, threshold=0.75):    # 原：threshold=0.65
     # 为bounding_box 匹配标签
     pred_num = len(pred_emb)
     dataset_num = len(dataset_emb)

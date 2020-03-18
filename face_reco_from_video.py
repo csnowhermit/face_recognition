@@ -25,7 +25,9 @@ frame_rate = 0
 frame_count = 0
 
 normalization = False    # 是否标准化，默认否
-output_path = "D:/奇辉电子/识别添乘-源文件-人脸识别.mp4"    # 输出文件，为空则认为不需要输出
+
+input_path = "D:/奇辉电子/120_150_2.mp4"
+output_path = "D:/奇辉电子/120_150_2-人脸识别.mp4"    # 输出文件，为空则认为不需要输出
 
 if __name__ == '__main__':
     model_path = 'models/20180408-102900'
@@ -36,7 +38,7 @@ if __name__ == '__main__':
     face_detect = face_recognition.FaceDetection()    # 初始化mtcnn
     face_net = face_recognition.facenetEmbedding(model_path)    # 初始化facenet
 
-    cap = cv2.VideoCapture("D:/奇辉电子/识别添乘-源文件.mp4")
+    cap = cv2.VideoCapture(input_path)
     start_time = time.time()
 
     video_FourCC = int(cap.get(cv2.CAP_PROP_FOURCC))

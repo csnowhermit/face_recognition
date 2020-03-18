@@ -5,8 +5,8 @@ import face_recognition
 import cv2
 import os
 
-resize_width  =  160
-resize_height  =  160
+resize_width = 160
+resize_height = 160
 
 
 def get_face_embedding(model_path, files_list, names_list):
