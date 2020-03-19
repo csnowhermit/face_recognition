@@ -1,11 +1,4 @@
 # -*-coding: utf-8 -*-
-"""
-    @Project: IntelligentManufacture
-    @File   : image_processing.py
-    @Author : panjq
-    @E-mail : pan_jinquan@163.com
-    @Date   : 2019-02-14 15:34:50
-"""
 
 import os
 import glob
@@ -13,6 +6,8 @@ import cv2
 import numpy as np
 import matplotlib.pyplot as plt
 import copy
+from PIL import Image, ImageDraw, ImageFont
+from utils import general_util
 
 def show_batch_image(title,batch_imgs,index=0):
     image = batch_imgs[index, :]
@@ -354,7 +349,25 @@ def show_image_bboxes_text(title, rgb_image, boxes, boxes_name):
     for name, box in zip(boxes_name, boxes):
         box = [int(b) for b in box]
         cv2.rectangle(bgr_image, (box[0], box[1]), (box[2], box[3]), (0, 255, 0), 2, 8, 0)
-        cv2.putText(bgr_image, name, (box[0], box[1]), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 255), thickness=2)
+        # cv2.putText(bgr_image, name, (box[0], box[1]), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 255), thickness=2)
+
+        zh_cn_nums = general_util.get_zhcn_number(name)  # 中文的字数（一个中文字20个像素宽，一个英文字10个像素宽）
+        t_size = (20 * zh_cn_nums + 10 * (len(name) - zh_cn_nums), 22)
+        c2 = box[0] + t_size[0], box[1] - t_size[1] - 3  # 纵坐标，多减3目的是字上方稍留空
+        cv2.rectangle(bgr_image, (box[0], box[1]), c2, (0, 0, 255), -1)  # filled
+        # print("t_size:", t_size, " c1:", c1, " c2:", c2)
+
+        # Draw a label with a name below the face
+        # cv2.rectangle(im0, c1, c2, (0, 0, 255), cv2.FILLED)
+        font = cv2.FONT_HERSHEY_DUPLEX
+
+        # 将CV2转为PIL，添加中文label后再转回来
+        pil_img = Image.fromarray(cv2.cvtColor(bgr_image, cv2.COLOR_BGR2RGB))
+        draw = ImageDraw.Draw(pil_img)
+        font = ImageFont.truetype('simhei.ttf', 20, encoding='utf-8')
+        draw.text((box[0], box[1] - 20), name, (255, 255, 255), font=font)
+
+        bgr_image = cv2.cvtColor(np.array(pil_img), cv2.COLOR_RGB2BGR)  # PIL转CV2
     # cv2.imshow(title, bgr_image)
     # cv2.waitKey(0)
     rgb_image = cv2.cvtColor(bgr_image, cv2.COLOR_BGR2RGB)
