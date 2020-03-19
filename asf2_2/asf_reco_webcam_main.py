@@ -89,13 +89,5 @@ if __name__ == '__main__':
                 im.data = cv2.cvtColor(np.array(pil_img), cv2.COLOR_RGB2BGR)  # PIL转CV2
         cv2.imshow("asf_reco_webcam_main", im.data)
         cv2.waitKey(1)
-
-
-
-    # # # # 文件获取特征
-    # # tz = fun.ftfromfile('d:/1.dat')
-    # # jg = fun.BD(feature1, tz)
-    # # print(jg[1])
-    # # 结果比对
-    # jg = fun.BD(tz1,tz2)
-    # print(jg[1])
+    cap.release()
+    cv2.destroyAllWindows()
