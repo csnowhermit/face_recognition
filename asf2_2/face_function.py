@@ -42,12 +42,12 @@ def face_detect(im):
     imgcuby = cast(imgby, c_ubyte_p)
     ret = face_dll.detect(Handle, im.width, im.height, 0x201, imgcuby, byref(faces))
 
-    print('faces.faceNum:', faces.faceNum)
+    # print('faces.faceNum:', faces.faceNum)
     for i in range(0, faces.faceNum):
         rr = faces.faceRect[i]
-        print("face %s" % str(i), end=': ')
-        print('range', (rr.left1, rr.top1, rr.right1, rr.bottom1), end=' ')
-        print('jd', faces.faceOrient[i])  # 方向
+        # print("face %s" % str(i), end=': ')
+        # print('range', (rr.left1, rr.top1, rr.right1, rr.bottom1), end=' ')
+        # print('jd', faces.faceOrient[i])  # 方向
     if ret == 0:  # 检测成功，返回人脸的情况
         return faces
     else:  # 否则返回错误代码
@@ -74,7 +74,7 @@ def Feature_extract(im, ft):
         # 必须操作内存来保留特征值，因为c++会在过程结束后自动释放内存
         retz.feature = face_dll.malloc(detectedFaces.featureSize)
         face_dll.memcpy(retz.feature, detectedFaces.feature, detectedFaces.featureSize)
-        # print('提取特征成功:',detectedFaces.featureSize,mem)
+        # print('提取特征成功:', detectedFaces.featureSize, mem)
         return ret, retz
     else:
         return ret, None
@@ -85,6 +85,7 @@ def Feature_extract(im, ft):
     :param names_list 标签列表
 '''
 def Feature_extract_batch(fun, files_list, names_list):
+    asf_embeddings_size = []    # 特征的大小
     asf_embeddings = []    # 特征
     asf_label_list = []    # 标签
     for img_path, name in zip(files_list, names_list):
@@ -98,30 +99,87 @@ def Feature_extract_batch(fun, files_list, names_list):
         if ret == -1:
             print('人脸检测失败:', ret)
             continue
-        else:
-            print('人脸检测成功:', ret)
         faces = ret
         if faces.faceNum != 1:
             print("-----image total {} faces, continue...".format(faces.faceNum))
             continue
 
         ft = fun.getSingleFace(faces, 0)  # 从faces集中，提取第0个人的特征
-        print("ft:", ft.faceRect.left1, ft.faceRect.top1, ft.faceRect.right1, ft.faceRect.bottom1, ft.faceOrient)
-        ret, feature = fun.Feature_extract(im, ft)  # 返回tuple，(标识, 特征)
-        if ret == 0:
-            print("特征提取成功：", feature.featureSize, feature.feature)
-        else:
+        # print("ft:", ft.faceRect.left1, ft.faceRect.top1, ft.faceRect.right1, ft.faceRect.bottom1, ft.faceOrient)
+        ret, fea = fun.Feature_extract(im, ft)  # 返回tuple，(标识, 特征)
+        if ret != 0:
             print("特征提取失败！")
             continue
-        asf_embeddings.append(feature.feature)
-        asf_label_list.append(name)
-    return asf_embeddings, asf_label_list
+        asf_embeddings_size.append(fea.featureSize)    # 特征的大小，feature.featureSize
+        asf_embeddings.append(fea.feature)    # feature，ASF_FaceFeature类型，包括：feature.featureSize, feature.feature
+        asf_label_list.append(name)           # 标签
+    return asf_embeddings_size, asf_embeddings, asf_label_list
 
-# 特征值比对
+'''
+    程序启动时，批量抽取库中图片的特征
+'''
+def Feature_extract_online(fun, files_list, names_list):
+    asf_feature = []    # 特征
+    asf_label_list = []    # 标签
+    for img_path, name in zip(files_list, names_list):
+        print("processing image: {}".format(img_path))
+
+        im = face_class.IM()
+        im.filepath = img_path
+        im = fun.LoadImg(im)    # 加载图片
+
+        ret = fun.face_detect(im)    # 人脸检测
+        if ret == -1:
+            print('人脸检测失败:', ret)
+            continue
+        # else:
+        #     print('人脸检测成功:', ret)
+        faces = ret
+        if faces.faceNum != 1:
+            print("-----image total {} faces, continue...".format(faces.faceNum))
+            continue
+
+        ft = fun.getSingleFace(faces, 0)  # 从faces集中，提取第0个人的特征
+        # print("ft:", ft.faceRect.left1, ft.faceRect.top1, ft.faceRect.right1, ft.faceRect.bottom1, ft.faceOrient)
+        ret, fea = fun.Feature_extract(im, ft)  # 返回tuple，(标识, 特征)
+        if ret != 0:
+            print("特征提取失败！")
+            continue
+        asf_feature.append(fea)    # feature，ASF_FaceFeature类型，包括：feature.featureSize, feature.feature
+        asf_label_list.append(name)           # 标签
+    return asf_feature, asf_label_list
+
+'''
+    特征值比对
+    :param feature1 ASF_FaceFeature类型
+    :param feature2 ASF_FaceFeature类型
+'''
 def Feature_compare(feature1, feature2):
     jg = c_float()
     ret = face_dll.feature_compare(Handle, feature1, feature2, byref(jg))
     return ret, jg.value
+
+'''
+    和库中特征值比对
+    :param feature 图像中特征
+    :param asf_dataset_size_emb 库中特征大小列表
+    :param asf_dataset_emb 库中特征列表
+    :param asf_name_list 库中标签列表
+'''
+def asf_compare_embadding(feature, asf_dataset_size_emb, asf_dataset_emb, asf_name_list):
+    retList = []
+    scoreList = []
+    for curr_size, curr_emb, name in zip(asf_dataset_size_emb, asf_dataset_emb, asf_name_list):
+        print("curr_size:", type(curr_size), curr_size)    # <class 'numpy.int32'> 1032
+        print("curr_emb:", type(curr_emb), curr_emb)    # <class 'numpy.int64'>
+        print("feature:", type(feature))      # <class 'asf2_2.face_class.ASF_FaceFeature'>
+
+        cemb = face_class.ASF_FaceFeature(byref(curr_emb), byref(curr_size))
+
+        ret, score = Feature_compare(feature, cemb)
+        retList.append(ret)
+        scoreList.append(score)
+    return retList, scoreList
 
 # 特征保存至文件
 def writeFeature2File(feature, filepath):
