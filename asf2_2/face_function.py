@@ -3,6 +3,7 @@ import asf2_2.face_class as face_class
 from ctypes import *
 import cv2
 from io import BytesIO
+import numpy as np
 
 # from Main import *
 Handle = c_void_p()
@@ -22,7 +23,8 @@ def initAll():
 
 # 加载图片并预处理
 def LoadImg(im):
-    img = cv2.imread(im.filepath)
+    # img = cv2.imread(im.filepath)    # 无法读取中文目录
+    img = cv2.imdecode(np.fromfile(im.filepath, dtype=np.uint8), -1)    # 应这么读
     sp = img.shape
     img = cv2.resize(img,(sp[1]//4*4,sp[0]//4*4))
     sp = img.shape
@@ -31,7 +33,7 @@ def LoadImg(im):
     im.height = sp[0]
     return im
 
-# 人脸识别
+# 人脸检测
 def face_detect(im):
     faces = face_class.ASF_MultiFaceInfo()
     print("faces:", faces)
@@ -40,22 +42,23 @@ def face_detect(im):
     imgcuby = cast(imgby, c_ubyte_p)
     ret = face_dll.detect(Handle, im.width, im.height, 0x201, imgcuby, byref(faces))
 
-    print('ret', faces.faceNum)
+    print('faces.faceNum:', faces.faceNum)
     for i in range(0, faces.faceNum):
         rr = faces.faceRect[i]
-        print('range', rr.left1)
-        print('jd', faces.faceOrient[i])
-    if ret == 0:
+        print("face %s" % str(i), end=': ')
+        print('range', (rr.left1, rr.top1, rr.right1, rr.bottom1), end=' ')
+        print('jd', faces.faceOrient[i])  # 方向
+    if ret == 0:  # 检测成功，返回人脸的情况
         return faces
-    else:
+    else:  # 否则返回错误代码
         return ret
 
-# 显示人脸识别图片
+# 显示识别后的图片
 def showimg(im, faces):
     for i in range(0, faces.faceNum):
         ra = faces.faceRect[i]
-        cv2.rectangle(im.data,(ra.left1,ra.top1),(ra.right1,ra.bottom1),(255,0,0,),2)
-    cv2.imshow('face_reco',im.data)
+        cv2.rectangle(im.data, (ra.left1, ra.top1), (ra.right1, ra.bottom1), (255, 0, 0,), 2)
+    cv2.imshow('face_detect', im.data)
     cv2.waitKey(0)
 
 # 提取人脸特征
@@ -74,7 +77,45 @@ def Feature_extract(im, ft):
         # print('提取特征成功:',detectedFaces.featureSize,mem)
         return ret, retz
     else:
-        return ret
+        return ret, None
+
+'''
+    批量提取图片中的人脸特征
+    :param files_list 图片列表
+    :param names_list 标签列表
+'''
+def Feature_extract_batch(fun, files_list, names_list):
+    asf_embeddings = []    # 特征
+    asf_label_list = []    # 标签
+    for img_path, name in zip(files_list, names_list):
+        print("processing image: {}".format(img_path))
+
+        im = face_class.IM()
+        im.filepath = img_path
+        im = fun.LoadImg(im)    # 加载图片
+
+        ret = fun.face_detect(im)    # 人脸检测
+        if ret == -1:
+            print('人脸检测失败:', ret)
+            continue
+        else:
+            print('人脸检测成功:', ret)
+        faces = ret
+        if faces.faceNum != 1:
+            print("-----image total {} faces, continue...".format(faces.faceNum))
+            continue
+
+        ft = fun.getSingleFace(faces, 0)  # 从faces集中，提取第0个人的特征
+        print("ft:", ft.faceRect.left1, ft.faceRect.top1, ft.faceRect.right1, ft.faceRect.bottom1, ft.faceOrient)
+        ret, feature = fun.Feature_extract(im, ft)  # 返回tuple，(标识, 特征)
+        if ret == 0:
+            print("特征提取成功：", feature.featureSize, feature.feature)
+        else:
+            print("特征提取失败！")
+            continue
+        asf_embeddings.append(feature.feature)
+        asf_label_list.append(name)
+    return asf_embeddings, asf_label_list
 
 # 特征值比对
 def Feature_compare(feature1, feature2):
@@ -91,11 +132,12 @@ def writeFeature2File(feature, filepath):
 
 # 从多人中提取单人数据
 def getSingleFace(singleface, index):
-    ft = face_class.ASF_SingleFaceInfo()
+    ft = face_class.ASF_SingleFaceInfo()    # ft，人脸的信息：坐标点（左、上、右、下）和朝向
     ra = singleface.faceRect[index]
+
     ft.faceRect.left1 = ra.left1
-    ft.faceRect.right1 = ra.right1
     ft.faceRect.top1 = ra.top1
+    ft.faceRect.right1 = ra.right1
     ft.faceRect.bottom1 = ra.bottom1
     ft.faceOrient = singleface.faceOrient[index]
     return ft

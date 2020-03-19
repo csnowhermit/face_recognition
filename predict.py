@@ -73,13 +73,14 @@ def compare_embadding(pred_emb, dataset_emb, names_list, threshold=0.75):    # �
             pred_name.append(names_list[distList.index(min_value)])
     return pred_name, pred_score
 
-if __name__=='__main__':
-    model_path='models/20180408-102900'
-    dataset_path='dataset/emb/faceEmbedding.npy'    # 人脸特征
-    filename='dataset/emb/name.txt'                  # 人脸列表
-    # image_path='dataset/test_images/1.jpg'          # 待检图片
-    image_path = "D:/workspace/imgs/rxt2.jpg"
-    # image_path = "C:/Users/ASUS/Desktop/TIM图片20200318145759.jpg"
+if __name__ == '__main__':
+    model_path = 'models/20180408-102900'
+    dataset_path = 'dataset/emb/faceEmbedding.npy'    # 人脸特征
+    filename = 'dataset/emb/name.txt'                  # 人脸列表
+    # image_path = 'dataset/test_images/1.jpg'          # 待检图片
+    # image_path = "D:/workspace/imgs/rxt2.jpg"
+    # image_path = "D:/workspace/imgs/yasi_1.jpg"
+    image_path = "D:/workspace/imgs/q1.jpg"
     # image_path = "C:/Users/ASUS/Desktop/img.jpg"
 
-    face_recognition_image(model_path, dataset_path, filename,image_path)
+    face_recognition_image(model_path, dataset_path, filename, image_path)

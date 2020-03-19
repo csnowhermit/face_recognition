@@ -201,7 +201,7 @@ def get_files_list(file_dir, postfix=None):
     return file_list
 
 
-def gen_files_labels(files_dir,postfix=None):
+def gen_files_labels(files_dir, postfix=None):
     '''
     获取files_dir路径下所有文件路径，以及labels,其中labels用子级文件名表示
     files_dir目录下，同一类别的文件放一个文件夹，其labels即为文件的名

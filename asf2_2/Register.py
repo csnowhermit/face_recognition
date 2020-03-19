@@ -2,7 +2,9 @@ import asf2_2.face_dll as face_dll
 import asf2_2.face_class as face_class
 from ctypes import *
 import cv2
+import numpy as np
 import asf2_2.face_function as fun
+from utils import file_processing
 
 '''
     注册
@@ -10,6 +12,10 @@ import asf2_2.face_function as fun
 
 Appkey = b'CMcpj718EeZr6ueCDCpRwQJgPNTvrxJXEJAhp3myYt5u'
 SDKey = b'D5QB8ARVCxWsTLAeWi2SqAmXkVToqWCVAto6UNce3mXd'
+
+asf_dataset_path = "../dataset/images"                  # 数据集目录
+asf_out_emb_path = 'asf_emb/asf_faceEmbedding.npy'    # 保存特征
+asf_out_filename = 'asf_emb/asf_name.txt'              # 保存标签
 
 if __name__ == '__main__':
     # 1.激活
@@ -28,36 +34,11 @@ if __name__ == '__main__':
         print('初始化失败:', ret)
         pass
 
-    # 3.加载图片
-    im = face_class.IM()
-    im.filepath = './img.jpg'
-    im = fun.LoadImg(im)
-    print(im.filepath, im.width, im.height)
-    cv2.imshow('im',im.data)
-    cv2.waitKey(0)
-    print('加载图片完成:', im)
+    files_list, names_list = file_processing.gen_files_labels(asf_dataset_path, postfix=['*.jpg'])
+    asf_embeddings, asf_label_list = fun.Feature_extract_batch(fun, files_list, names_list)    # 特征，标签
+    print("label_list:{}".format(asf_label_list))
+    print("have {} label".format(len(asf_label_list)))
 
-    # 4.人脸检测
-    ret = fun.face_detect(im)
-    if ret == -1:
-        print('人脸检测失败:', ret)
-        pass
-    else:
-        print('人脸检测成功:', ret)
-
-    # 5.显示人脸照片
-    fun.showimg(im, ret)
-
-    print("ret:", type(ret))
-    print(ret.faceNum)
-    # print(ret.faceRect.left1, ret.faceRect.top1, ret.faceRect.right1, ret.faceRect.bottom1)
-    print(ret.faceRect)
-    print(ret.faceOrient)
-    print(list(ret)[1])
-
-    # # 6.提取特征
-    # ft = fun.getSingleFace(ret[1], 0)
-    # feature1 = fun.Feature_extract(im, ft)[1]
-    #
-    # # 7.保存到文件
-    # fun.writeFeature2File(feature1, './1.dat')
+    asf_embeddings = np.asarray(asf_embeddings)
+    np.save(asf_out_emb_path, asf_embeddings)  # 保存特征
+    file_processing.write_list_data(asf_out_filename, asf_label_list, mode='w')  # 保存标签

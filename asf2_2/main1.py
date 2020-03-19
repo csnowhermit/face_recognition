@@ -50,11 +50,18 @@ if __name__ == '__main__':
     print("ret:", type(ret))
 
     # 5.显示人脸照片
-    fun.showimg(im, ret)
+    faces = ret
+    fun.showimg(im, faces)
 
     # 提取单人1特征
-    ft = fun.getSingleFace(ret[1], 0)
-    feature1 = fun.Feature_extract(im, ft)[1]
+    ft = fun.getSingleFace(faces, 0)    # 从faces集中，提取第0个人的特征
+    print("ft:", ft.faceRect.left1, ft.faceRect.top1, ft.faceRect.right1, ft.faceRect.bottom1, ft.faceOrient)
+    ret, feature = fun.Feature_extract(im, ft)    # 返回tuple，(标识, 特征)
+    # print("feature1:", feature1)
+    if ret == 0:
+        print("特征提取成功：", feature.featureSize, feature.feature)
+    else:
+        print("特征提取失败！")
 
     # # 提取单人2特征
     # ft = fun.getsingleface(ret[1], 1)

@@ -62,8 +62,8 @@ def create_face_embedding(model_path, dataset_path, out_emb_path, out_filename):
     :param out_filename: 输出与embeddings一一对应的标签
     :return: None
     '''
-    files_list,names_list = file_processing.gen_files_labels(dataset_path,postfix = ['*.jpg'])
-    embeddings,label_list = get_face_embedding(model_path,files_list, names_list)
+    files_list, names_list = file_processing.gen_files_labels(dataset_path,postfix = ['*.jpg'])
+    embeddings,label_list = get_face_embedding(model_path, files_list, names_list)
     print("label_list:{}".format(label_list))
     print("have {} label".format(len(label_list)))
 

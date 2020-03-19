@@ -4,7 +4,7 @@ from ctypes import *
 import cv2
 
 '''
-    python调用虹软人脸识别2.2，windows x64
+    arcsoft2.2，windows x64，人脸检测
 '''
 
 Appkey = b'CMcpj718EeZr6ueCDCpRwQJgPNTvrxJXEJAhp3myYt5u'
@@ -35,23 +35,24 @@ def LoadImg(im):
     im.height = sp[0]
     return im
 
-# 人脸识别
+# 人脸检测
 def face_detect(im):
     faces = face_class.ASF_MultiFaceInfo()
     print("faces:", faces)
     img = im.data
     imgby = bytes(im.data)
     imgcuby = cast(imgby,c_ubyte_p)
-    ret = face_dll.detect(Handle, im.width, im.height, 0x201, imgcuby, byref(faces))
+    ret = face_dll.detect(Handle, im.width, im.height, 0x201, imgcuby, byref(faces))    # 人脸检测成功，返回0；失败，返回-1
 
-    print('ret',faces.faceNum)
+    print('faces.faceNum:',faces.faceNum)
     for i in range(0, faces.faceNum):
         rr = faces.faceRect[i]
-        print('range', rr.left1)
-        print('jd', faces.faceOrient[i])
-    if ret == 0:
+        print("face %s" % str(i), end=': ')
+        print('range', (rr.left1, rr.top1, rr.right1, rr.bottom1), end=' ')
+        print('jd', faces.faceOrient[i])    # 方向
+    if ret == 0:    # 检测成功，返回人脸的情况
         return faces
-    else:
+    else:    # 否则返回错误代码
         return ret
 
 # 显示人脸识别图片
@@ -59,7 +60,7 @@ def showimg(im, faces):
     for i in range(0, faces.faceNum):
         ra = faces.faceRect[i]
         cv2.rectangle(im.data, (ra.left1, ra.top1), (ra.right1, ra.bottom1), (255, 0, 0), 2)
-    cv2.imshow('face_reco', im.data)
+    cv2.imshow('face_detect', im.data)
     cv2.waitKey(0)
 
 if __name__ == '__main__':
@@ -87,7 +88,7 @@ if __name__ == '__main__':
     # cv2.waitKey(0)
     print('加载图片完成:', im)
 
-    # 4.人脸识别
+    # 4.人脸检测
     ret = face_detect(im)
     if ret == -1:
         print('人脸检测失败:', ret)
@@ -97,5 +98,6 @@ if __name__ == '__main__':
 
     print("ret:", type(ret))
 
-    # 5.显示检测结果
-    showimg(im, ret)
+    # 5.显示检测结果，这时face_detect()返回的是faces
+    faces = ret
+    showimg(im, faces)
