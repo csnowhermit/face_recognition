@@ -4,6 +4,8 @@ from ctypes import *
 import cv2
 from io import BytesIO
 import numpy as np
+import pymysql
+import base64
 
 # from Main import *
 Handle = c_void_p()
@@ -36,7 +38,7 @@ def LoadImg(im):
 # 人脸检测
 def face_detect(im):
     faces = face_class.ASF_MultiFaceInfo()
-    print("faces:", faces)
+    # print("faces:", faces)
     img = im.data
     imgby = bytes(im.data)
     imgcuby = cast(imgby, c_ubyte_p)
@@ -85,7 +87,6 @@ def Feature_extract(im, ft):
     :param names_list 标签列表
 '''
 def Feature_extract_batch(fun, files_list, names_list):
-    asf_embeddings_size = []    # 特征的大小
     asf_embeddings = []    # 特征
     asf_label_list = []    # 标签
     for img_path, name in zip(files_list, names_list):
@@ -110,44 +111,10 @@ def Feature_extract_batch(fun, files_list, names_list):
         if ret != 0:
             print("特征提取失败！")
             continue
-        asf_embeddings_size.append(fea.featureSize)    # 特征的大小，feature.featureSize
-        asf_embeddings.append(fea.feature)    # feature，ASF_FaceFeature类型，包括：feature.featureSize, feature.feature
+        # asf_embeddings_size.append(fea.featureSize)    # 特征的大小，feature.featureSize
+        asf_embeddings.append(fea)    # feature，ASF_FaceFeature类型，包括：feature.featureSize, feature.feature
         asf_label_list.append(name)           # 标签
-    return asf_embeddings_size, asf_embeddings, asf_label_list
-
-'''
-    程序启动时，批量抽取库中图片的特征
-'''
-def Feature_extract_online(fun, files_list, names_list):
-    asf_feature = []    # 特征
-    asf_label_list = []    # 标签
-    for img_path, name in zip(files_list, names_list):
-        print("processing image: {}".format(img_path))
-
-        im = face_class.IM()
-        im.filepath = img_path
-        im = fun.LoadImg(im)    # 加载图片
-
-        ret = fun.face_detect(im)    # 人脸检测
-        if ret == -1:
-            print('人脸检测失败:', ret)
-            continue
-        # else:
-        #     print('人脸检测成功:', ret)
-        faces = ret
-        if faces.faceNum != 1:
-            print("-----image total {} faces, continue...".format(faces.faceNum))
-            continue
-
-        ft = fun.getSingleFace(faces, 0)  # 从faces集中，提取第0个人的特征
-        # print("ft:", ft.faceRect.left1, ft.faceRect.top1, ft.faceRect.right1, ft.faceRect.bottom1, ft.faceOrient)
-        ret, fea = fun.Feature_extract(im, ft)  # 返回tuple，(标识, 特征)
-        if ret != 0:
-            print("特征提取失败！")
-            continue
-        asf_feature.append(fea)    # feature，ASF_FaceFeature类型，包括：feature.featureSize, feature.feature
-        asf_label_list.append(name)           # 标签
-    return asf_feature, asf_label_list
+    return asf_embeddings, asf_label_list
 
 '''
     特征值比对
@@ -162,31 +129,32 @@ def Feature_compare(feature1, feature2):
 '''
     和库中特征值比对
     :param feature 图像中特征
-    :param asf_dataset_size_emb 库中特征大小列表
     :param asf_dataset_emb 库中特征列表
     :param asf_name_list 库中标签列表
 '''
-def asf_compare_embadding(feature, asf_dataset_size_emb, asf_dataset_emb, asf_name_list):
-    retList = []
+def asf_compare_embadding(feature, asf_dataset_emb, asf_name_list, threshold=0.9):
     scoreList = []
-    for curr_size, curr_emb, name in zip(asf_dataset_size_emb, asf_dataset_emb, asf_name_list):
-        print("curr_size:", type(curr_size), curr_size)    # <class 'numpy.int32'> 1032
-        print("curr_emb:", type(curr_emb), curr_emb)    # <class 'numpy.int64'>
-        print("feature:", type(feature))      # <class 'asf2_2.face_class.ASF_FaceFeature'>
-
-        cemb = face_class.ASF_FaceFeature(byref(curr_emb), byref(curr_size))
-
-        ret, score = Feature_compare(feature, cemb)
-        retList.append(ret)
+    for curr_emb, name in zip(asf_dataset_emb, asf_name_list):
+        ret, score = Feature_compare(feature, curr_emb)
         scoreList.append(score)
-    return retList, scoreList
+    max_score = max(scoreList)    # 找最大的score
+    if max_score > threshold:
+        pred_name = asf_name_list[scoreList.index(max_score)]    # 找出人
+        return pred_name, max_score
+    else:
+        return None, max_score
 
 # 特征保存至文件
-def writeFeature2File(feature, filepath):
-    f = BytesIO(string_at(feature.feature, feature.featureSize))
-    a = open(filepath,'wb')
-    a.write(f.getvalue())
-    a.close()
+def writeFeature2File(featureList, filepath):
+    # a = open(filepath, 'wb')
+    featureArr = []
+    for feature in featureList:
+        f = BytesIO(string_at(feature.feature, feature.featureSize))
+        featureArr.append(f.getvalue())
+    # a.write(featureArr)
+    # a.close()
+    featureArr = np.asarray(featureArr)
+    np.save(filepath, featureArr)  # 保存特征
 
 # 从多人中提取单人数据
 def getSingleFace(singleface, index):
@@ -208,5 +176,36 @@ def readFeatureFromFile(filepath):
     f.close()
     fas.featureSize = b.__len__()
     fas.feature = face_dll.malloc(fas.featureSize)
-    face_dll.memcpy(fas.feature,b,fas.featureSize)
+    face_dll.memcpy(fas.feature, b, fas.featureSize)
     return fas
+
+'''
+    从数据库中读出特征值
+    :return 特征，标签
+'''
+def loadFeatureFromDB():
+    conn = pymysql.connect(host="localhost", port=3306, user="root", password="123456", db="test")
+    cursor = conn.cursor()
+
+    sql = "select name, feature_size, feature, create_time from asf_user_face_info"
+    cursor.execute(sql)
+
+    ASF_FaceFeature_List = []
+    asf_name_list = []
+
+    for r in cursor.fetchall():
+        # print(r[0], r[1], r[2], r[3])
+        asf_name_list.append(r[0])    # 标签
+        feat = r[2]
+        feat = feat[feat.index("'") + 1: -1]
+        if len(feat) % 2 != 0:
+            feat = feat + "="
+        feat = base64.b64decode(feat)
+
+        fas = face_class.ASF_FaceFeature()    # 特征
+        fas.featureSize = r[1]
+        fas.feature = face_dll.malloc(fas.featureSize)
+        face_dll.memcpy(fas.feature, feat, fas.featureSize)
+        ASF_FaceFeature_List.append(fas)
+    cursor.close()
+    return ASF_FaceFeature_List, asf_name_list    # 返回特征，标签

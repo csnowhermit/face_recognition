@@ -80,7 +80,7 @@ if __name__ == '__main__':
     # image_path = 'dataset/test_images/1.jpg'          # 待检图片
     # image_path = "D:/workspace/imgs/rxt2.jpg"
     # image_path = "D:/workspace/imgs/yasi_1.jpg"
-    image_path = "D:/workspace/imgs/q1.jpg"
+    image_path = "D:/workspace/imgs/stongxue.jpg"
     # image_path = "C:/Users/ASUS/Desktop/img.jpg"
 
     face_recognition_image(model_path, dataset_path, filename, image_path)
