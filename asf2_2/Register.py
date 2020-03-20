@@ -46,7 +46,7 @@ if __name__ == '__main__':
     print("label_list:{}".format(asf_label_list))
     print("have {} label".format(len(asf_label_list)))
     for f, name in zip(asf_embeddings, asf_label_list):
-        print(f.feature, f.featureSize)
+        # print(f.feature, f.featureSize)
 
         f_bytes = BytesIO(string_at(f.feature, f.featureSize))
         # print("f.getvalue():", len(f.getvalue()), f.getvalue())

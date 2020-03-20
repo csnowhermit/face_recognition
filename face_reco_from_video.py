@@ -14,7 +14,7 @@ from PIL import Image, ImageDraw, ImageFont
 
 
 '''
-    实时人脸识别：从摄像头输入
+    实时人脸识别：从视频文件输入
 '''
 
 resize_width = 160

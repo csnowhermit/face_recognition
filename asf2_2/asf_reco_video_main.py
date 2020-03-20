@@ -15,8 +15,8 @@ SDKey = b'D5QB8ARVCxWsTLAeWi2SqAmXkVToqWCVAto6UNce3mXd'
     人脸识别，从摄像头输入
 '''
 
-input_path = "D:/奇辉电子/120_150_2.mp4"
-output_path = "D:/奇辉电子/120_150_2-asf-人脸识别.mp4"    # 输出文件，为空则认为不需要输出
+input_path = "D:/奇辉电子/识别添乘-源文件.mp4"
+output_path = "D:/奇辉电子/识别添乘-源文件-asf-人脸识别.mp4"    # 输出文件，为空则认为不需要输出
 frame_count = 0
 
 if __name__ == '__main__':
