@@ -61,6 +61,7 @@ if __name__ == '__main__':
         if isOutput:
             print(frame_count, "/", total_frame_count, end=' ')  # 当前第几帧
 
+        frame = cv2.resize(frame, (frame.shape[1] // 4 * 4, frame.shape[0] // 4 * 4))  # 宽高要reshape成4的倍数，否则会报错：90127
         im = face_class.IM()
         im.data = frame
         im.width = frame.shape[1]
