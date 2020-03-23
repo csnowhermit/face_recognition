@@ -164,7 +164,7 @@ if __name__ == '__main__':
                         correct_nums += 1
                     reco_result.append((file, name, pred_name, pred_score))    # 文件名，标注名，识别名，置信度
                 else:  # 同一帧图片有多个人脸的情况，“特征提取失败”会打印多次
-                    print("特征提取失败：", file)
+                    print("特征提取失败：", file, box)    # 打印下，看哪张人脸的特征提取失败了
                     reco_result.append((file, name, "Feature Failed", "No Score"))
 
     # 8.测评完成
