@@ -28,7 +28,7 @@ def LoadImg(im):
     # img = cv2.imread(im.filepath)    # 无法读取中文目录
     img = cv2.imdecode(np.fromfile(im.filepath, dtype=np.uint8), -1)    # 应这么读
     sp = img.shape
-    img = cv2.resize(img,(sp[1]//4*4,sp[0]//4*4))
+    img = cv2.resize(img, (sp[1]//4*4,sp[0]//4*4))    # 确保图片大小为4的倍数
     sp = img.shape
     im.data = img
     im.width = sp[1]
