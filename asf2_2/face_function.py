@@ -196,7 +196,7 @@ def loadFeatureFromDB():
     for r in cursor.fetchall():
         # print(r[0], r[1], r[2], r[3])
         asf_name_list.append(r[0])    # 标签
-        feat = r[2]
+        feat = r[2]    # feature字段，特征
         feat = feat[feat.index("'") + 1: -1]
         if len(feat) % 2 != 0:
             feat = feat + "="

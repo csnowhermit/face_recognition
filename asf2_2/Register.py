@@ -21,7 +21,7 @@ asf_dataset_path = "../dataset/images"                  # 数据集目录
 # asf_out_emb_path = 'asf_emb/asf_faceEmbedding.npy'    # 保存特征
 # asf_out_filename = 'asf_emb/asf_name.txt'              # 保存标签
 
-if __name__ == '__main__':
+def main():
     conn = pymysql.connect(host="localhost", port=3306, user="root", password="123456", db="test")
     cursor = conn.cursor()
 
@@ -42,7 +42,7 @@ if __name__ == '__main__':
         pass
 
     files_list, names_list = file_processing.gen_files_labels(asf_dataset_path, postfix=['*.jpg'])
-    asf_embeddings, asf_label_list = fun.Feature_extract_batch(fun, files_list, names_list)    # 特征，标签
+    asf_embeddings, asf_label_list = fun.Feature_extract_batch(fun, files_list, names_list)  # 特征，标签
     print("label_list:{}".format(asf_label_list))
     print("have {} label".format(len(asf_label_list)))
     for f, name in zip(asf_embeddings, asf_label_list):
@@ -52,9 +52,9 @@ if __name__ == '__main__':
         # print("f.getvalue():", len(f.getvalue()), f.getvalue())
         # a.write(f.getvalue())
         sql = '''
-            insert into asf_user_face_info(name, feature_size, feature, create_time)
-            values ("%s", %d, "%s", "%s")
-        ''' % (str(name), f.featureSize, str(base64.b64encode(f_bytes.getvalue())), str(time.time()))
+                insert into asf_user_face_info(name, feature_size, feature, create_time)
+                values ("%s", %d, "%s", "%s")
+            ''' % (str(name), f.featureSize, str(base64.b64encode(f_bytes.getvalue())), str(time.time()))
 
         # print(sql)
         cursor.execute(sql)
@@ -66,3 +66,6 @@ if __name__ == '__main__':
 
     # fun.writeFeature2File(asf_embeddings, asf_out_emb_path)    # 采用writeFeature2File()方法保存特征
     # file_processing.write_list_data(asf_out_filename, asf_label_list, mode='w')  # 保存标签
+
+if __name__ == '__main__':
+    main()
