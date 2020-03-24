@@ -13,6 +13,7 @@ import utils.file_processing as file_processing
 from ctypes import *
 from io import BytesIO
 import base64
+from utils.Logger import Logger
 
 '''
     mtcnn+asf 准确率测评
@@ -28,6 +29,8 @@ frame_count = 0
 normalization = False    # 是否标准化，默认否
 
 data_path = "E:/testData/lfw"
+
+log = Logger('./logs/mtcnn_asf_eval.log', level='info')
 
 # 保存测试集人物信息：姓名，特征大小，特征，创建时间
 class userInfo():
@@ -46,16 +49,16 @@ if __name__ == '__main__':
     SDKey = b'D5QB8ARVCxWsTLAeWi2SqAmXkVToqWCVAto6UNce3mXd'
     ret = fun.Activate(Appkey, SDKey)  # 激活
     if ret == 0 or ret == 90114:
-        print('激活成功:', ret)
+        log.logger.info("激活成功: %s" % (ret))
     else:
-        print('激活失败:', ret)
+        log.logger.warn("激活失败: %s" % (ret))
         pass
 
     ret = fun.initAll()  # 初始化
     if ret[0] == 0:
-        print('初始化成功:', ret, '句柄', fun.Handle)
+        log.logger.info("初始化成功: %s, 句柄: %s" % (ret, fun.Handle))
     else:
-        print('初始化失败:', ret)
+        log.logger.warn("初始化失败: %s" % (ret))
 
     # 3.拿到files_list和names_list
     files_list, names_list = file_processing.gen_files_labels(data_path, postfix=['*.jpg'])
@@ -74,13 +77,14 @@ if __name__ == '__main__':
                 emb_name_list.append(name)    # 标签列表
                 already_existing_list.append(name)    # 该人已被处理
             if len(already_existing_list) % 100 == 0:
-                print("已处理 %.3f %%，耗时 %.3f s" % (len(already_existing_list) / len(set(names_list)) * 100.0,
+                log.logger.info("已处理 %.3f %%，耗时 %.3f s" % (len(already_existing_list) / len(set(names_list)) * 100.0,
                                                           time.time() - start))
-    print("数据预处理完成，耗时 %.3f s" % (time.time() - start))
+    log.logger.info("已处理 %.3f %%，耗时 %.3f s" % (len(already_existing_list) / len(set(names_list)) * 100.0,
+                                               time.time() - start))
 
-    print("emb_file_list:", emb_file_list)
-    print("emb_name_list:", emb_name_list)
-    print("already_existing_list:", already_existing_list)
+    log.logger.info("emb_file_list: %s" % (emb_file_list))
+    log.logger.info("emb_name_list: %s" % (emb_name_list))
+    log.logger.info("already_existing_list: %s" % (already_existing_list))
 
     # 5.遍历数据集，构建特征集容器
     asf_embeddings, asf_label_list = fun.Feature_extract_batch(fun, emb_file_list, emb_name_list)  # 特征，标签
@@ -100,7 +104,7 @@ if __name__ == '__main__':
     ASF_FaceFeature_List = []
     ASF_Name_List = []
     for r in userInfoList:
-        print(r.username, r.feature_size, r.feature, r.create_time)
+        # print(r.username, r.feature_size, r.feature, r.create_time)
 
         feat = r.feature  # feature字段，特征
         feat = feat[feat.index("'") + 1: -1]
@@ -115,7 +119,7 @@ if __name__ == '__main__':
         ASF_Name_List.append(r.username)  # 标签
 
     # 7.遍历数据集，进行人脸识别评测，测评内容：mtcnn+asf
-    total_check_sum = len(files_list)
+    total_check_sum = len(files_list)    # 有效图片数，=len(files_list)-noface图片数
     correct_nums = 0
     reco_result = []    # 识别结果
     image_count = 0
@@ -128,7 +132,7 @@ if __name__ == '__main__':
         # im.height = frame.shape[0]
         image_count += 1    # 当前为第几个图片
         if image_count % 100 == 0:
-            print("已完成：", image_count)
+            log.logger.info("人脸识别比对-已完成: %s / %s" % (image_count, len(files_list)))
 
         im = face_class.IM()
         im.filepath = file
@@ -138,10 +142,12 @@ if __name__ == '__main__':
         bboxes, landmarks = face_detect.get_square_bboxes(bboxes, landmarks, fixed="height")  # 以高为基准，获得等宽的矩形
         if bboxes == [] or landmarks == []:
             # print("-----no face")
+            log.logger.warn("no face: %s" % (file))
             total_check_sum -= 1    # 如果没脸，则该图片不能作为验证集
-            reco_result.append((file, name, "No Face", "No Score"))
+            reco_result.append((file, name, "No Face", "No Score", "No box"))
         else:
             # print("-----now have {} faces in {}".format(len(bboxes), im.filepath))
+            log.logger.info("-----now have %d faces: %s" % (len(bboxes), file))
             # print("faces.faceNum:", len(bboxes))
             for i in range(0, len(bboxes)):
                 # ra = faces.faceRect[i]
@@ -158,19 +164,19 @@ if __name__ == '__main__':
 
                 ret, fea = fun.Feature_extract(im, ft)  # 返回tuple，(标识, 特征)
                 if ret == 0:  # 特征提取成功
-                    pred_name, pred_score = fun.asf_compare_embadding(fea, ASF_FaceFeature_List, ASF_Name_List)  # 识别标签，分数
+                    pred_name, pred_score = fun.asf_compare_embadding(fea, ASF_FaceFeature_List, ASF_Name_List, threshold=0.8)  # 识别标签，分数
                     # print(pred_name, pred_score)
                     if pred_name == name:    # 如果识别姓名和标记姓名相同，则认为识别正确
                         correct_nums += 1
-                    reco_result.append((file, name, pred_name, pred_score))    # 文件名，标注名，识别名，置信度
+                    reco_result.append((file, name, pred_name, pred_score, box))    # 文件名，标注名，识别名，置信度，人脸框
                 else:  # 同一帧图片有多个人脸的情况，“特征提取失败”会打印多次
-                    # print("特征提取失败：", file, box)    # 打印下，看哪张人脸的特征提取失败了
-                    print("\t特征提取失败：%s，人脸个数：%d，失败点：%s" % (file, len(bboxes), box))
-                    reco_result.append((file, name, "Feature Failed", "No Score"))
+                    # 这时报错81925，表示人脸特征检测结果置信度低，说明mtcnn认为是人脸，而asf不认为这是人脸，提取特征的置信度低
+                    log.logger.warn("特征提取失败：%s，%s，人脸个数：%d，失败点：%s" % (ret, file, len(bboxes), box))
+                    reco_result.append((file, name, "Feature Failed", "No Score", box))
 
     # 8.测评完成
-    print("EVAL finished! Accuracy: %.3f %%" % (correct_nums / total_check_sum * 100.0))
-    print("Details:")
-    print("总人数：%d，总图片数：%d，正确数：%d" % (len(set(names_list)), total_check_sum, correct_nums))
+    log.logger.info("EVAL finished! Accuracy: %.3f %%" % (correct_nums / total_check_sum * 100.0))
+    log.logger.info("总人数：%d，总图片数：%d，有效图片数：%d，正确数：%d" % (len(set(names_list)), len(files_list), total_check_sum, correct_nums))
+    log.logger.info("Details:")
     for result in reco_result:
-        print(result)
+        log.logger.info(result)
