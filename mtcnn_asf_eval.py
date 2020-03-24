@@ -79,8 +79,7 @@ if __name__ == '__main__':
             if len(already_existing_list) % 100 == 0:
                 log.logger.info("已处理 %.3f %%，耗时 %.3f s" % (len(already_existing_list) / len(set(names_list)) * 100.0,
                                                           time.time() - start))
-    log.logger.info("已处理 %.3f %%，耗时 %.3f s" % (len(already_existing_list) / len(set(names_list)) * 100.0,
-                                               time.time() - start))
+    log.logger.info("已处理 100.000 %%，耗时 %.3f s" % (time.time() - start))
 
     log.logger.info("emb_file_list: %s" % (emb_file_list))
     log.logger.info("emb_name_list: %s" % (emb_name_list))
@@ -121,7 +120,9 @@ if __name__ == '__main__':
     # 7.遍历数据集，进行人脸识别评测，测评内容：mtcnn+asf
     total_check_sum = len(files_list)    # 有效图片数，=len(files_list)-noface图片数
     correct_nums = 0
-    reco_result = []    # 识别结果
+    reco_result = []    # 正常的识别结果
+    noface_result = []    # noface列表
+    feature_failed_result = []    # 特征提取错误列表
     image_count = 0
     for file, name in zip(files_list, names_list):    # 文件路径，标签
         # frame = cv2.imdecode(np.fromfile(file, dtype=np.uint8), cv2.IMREAD_COLOR)
@@ -141,13 +142,11 @@ if __name__ == '__main__':
         bboxes, landmarks = face_detect.detect_face(im.data)
         bboxes, landmarks = face_detect.get_square_bboxes(bboxes, landmarks, fixed="height")  # 以高为基准，获得等宽的矩形
         if bboxes == [] or landmarks == []:
-            # print("-----no face")
-            log.logger.warn("no face: %s" % (file))
+            # log.logger.warn("-----no face: %s" % (file))
             total_check_sum -= 1    # 如果没脸，则该图片不能作为验证集
-            reco_result.append((file, name, "No Face", "No Score", "No box"))
+            noface_result.append((file, name))
         else:
-            # print("-----now have {} faces in {}".format(len(bboxes), im.filepath))
-            log.logger.info("-----now have %d faces: %s" % (len(bboxes), file))
+            # log.logger.info("-----now have %d faces: %s" % (len(bboxes), file))
             # print("faces.faceNum:", len(bboxes))
             for i in range(0, len(bboxes)):
                 # ra = faces.faceRect[i]
@@ -172,11 +171,20 @@ if __name__ == '__main__':
                 else:  # 同一帧图片有多个人脸的情况，“特征提取失败”会打印多次
                     # 这时报错81925，表示人脸特征检测结果置信度低，说明mtcnn认为是人脸，而asf不认为这是人脸，提取特征的置信度低
                     log.logger.warn("特征提取失败：%s，%s，人脸个数：%d，失败点：%s" % (ret, file, len(bboxes), box))
-                    reco_result.append((file, name, "Feature Failed", "No Score", box))
+                    feature_failed_result.append((file, name, box))
 
     # 8.测评完成
     log.logger.info("EVAL finished! Accuracy: %.3f %%" % (correct_nums / total_check_sum * 100.0))
     log.logger.info("总人数：%d，总图片数：%d，有效图片数：%d，正确数：%d" % (len(set(names_list)), len(files_list), total_check_sum, correct_nums))
-    log.logger.info("Details:")
+
+    log.logger.info("Reco Details:")
     for result in reco_result:
-        log.logger.info(result)
+        log.logger.info("Reco result: %s" % (str(result)))
+
+    log.logger.info("NoFace Details:")
+    for result in noface_result:
+        log.logger.info("noface result: %s" % (str(result)))
+
+    log.logger.warn("Feature Failed Details:")
+    for result in feature_failed_result:
+        log.logger.info("Feature Failed result: %s" % (str(result)))
