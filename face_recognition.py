@@ -33,7 +33,8 @@ class FaceDetection:
             # gpu_memory_fraction = 1.0
             # gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=gpu_memory_fraction)
             # sess = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options, log_device_placement=False))
-            sess = tf.Session()
+            # sess = tf.Session()
+            sess = tf.compat.v1.Session()
             with sess.as_default():
                 self.pnet, self.rnet, self.onet = detect_face.create_mtcnn(sess, None)
     def detect_face(self,image,fixed=None):
