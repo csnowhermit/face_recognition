@@ -1,4 +1,4 @@
-# FaceReco4Monitor：监控场景下的人脸识别
+# FaceReco4Monitor
 
 ## 1、人脸检测
 
